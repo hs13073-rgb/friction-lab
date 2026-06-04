@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>摩擦力科學探究實驗室 - 砝碼累加版</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f7fafc;
+            margin: 0;
+            padding: 20px;
+            color: #2d3748;
+        }
+        h1 {
+            text-align: center;
+            color: #1a365d;
+            margin-bottom: 5px;
+            font-size: 24px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .container {
+            display: flex;
+            max-width: 1280px;
+            margin: 0 auto;
+            gap: 20px;
+        }
+        .panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            width: 340px;
+            min-width: 340px;
+        }
+        .visuals {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        canvas {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            width: 100%;
+        }
+        .panel-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2b6cb0;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 5px;
+        }
+        .control-group {
+            margin-bottom: 15px;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 14px;
+        }
+        .control-group select, .control-group input[type="range"] {
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e0;
+            box-sizing: border-box;
+            background-color: #fff;
+        }
+        .value-display {
+            float: right;
+            color: #2b6cb0;
+            font-weight: bold;
+        }
+        .btn {
+            background: #3182ce;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+            width: 100%;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+        .btn:hover {
+            background: #2b6cb0;
+        }
+        .data-box {
+            margin-top: 15px;
+            background: #edf2f7;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+        .data-val {
+            font-weight: bold;
+            color: #2d3748;
+        }
+        .unlocked {
+            color: #2f855a !important;
+            animation: flash 0.5s ease-in-out;
+        }
+        @keyframes flash {
+            0% { background-color: #c6f6d5; }
+            100% { background-color: transparent; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>摩擦力科學探究實驗室 (砝碼累加模擬)</h1>
+    <div class="subtitle">實驗任務：手拉彈簧秤，觀察增加 500gw 砝碼（正向力）後，對最大靜摩擦力的定量關係</div>
+
+    <div class="container">
+        <div class="panel">
+            <div class="panel-title">實驗參數設定</div>
+            
+            <div class="control-group">
+                <label>1. 設定物體總重 (基礎木塊 500gw)</label>
+                <select id="param-object">
+                    <option value="500">僅基礎木塊 (共 500 gw)</option>
+                    <option value="1000">木塊 + 增加 1 個砝碼 (共 1000 gw)</option>
+                    <option value="1500">木塊 + 增加 2 個砝碼 (共 1500 gw)</option>
+                    <option value="2000">木塊 + 增加 3 個砝碼 (共 2000 gw)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>2. 接觸面積 (擺放方式)</label>
+                <select id="param-area">
+                    <option value="large" data-w="130" data-h="60">平放 (大面積)</option>
+                    <option value="medium" data-w="95" data-h="82">側放 (中面積)</option>
+                    <option value="small" data-w="60" data-h="130">立放 (小面積)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>3. 更換接觸面材質</label>
+                <select id="param-surface">
+                    <option value="desk" data-mus="0.35" data-muk="0.22" selected>實驗室桌面 (摩擦係數未知)</option>
+                    <option value="sandpaper" data-mus="0.80" data-muk="0.62">粗糙砂紙面 (摩擦係數未知)</option>
+                    <option value="concrete" data-mus="0.60" data-muk="0.45">水泥路面 (摩擦係數未知)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>4. 拉動彈簧秤施力 (F): <span id="val-force" class="value-display">0</span> gw</label>
+                <input type="range" id="param-force" min="0" max="1800" step="4" value="0">
+            </div>
+            
+            <button class="btn" id="btn-reset">重新放置物體 (清空紀錄)</button>
+
+            <div class="data-box">
+                <div class="data-row"><span>目前接觸面:</span><span class="data-val" id="lbl-surface-name">實驗室桌面</span></div>
+                <div class="data-row"><span>總下壓正向力:</span><span class="data-val" style="color:#2b6cb0;"><span id="data-weight">500</span> gw</span></div>
+                <div class="data-row"><span>彈簧秤目前讀數:</span><span class="data-val" id="data-spring-read">0 gw</span></div>
+                <div class="data-row"><span>目前物體狀態:</span><span class="data-val" id="data-state" style="color:#dd6b20;">靜止</span></div>
+                <hr style="border:0; border-top:1px solid #cbd5e0; margin:8px 0;">
+                <div style="font-weight: bold; margin-bottom: 5px; color:#4a5568;">【實驗觀測紀錄結果】</div>
+                <div class="data-row"><span>最大靜摩擦力:</span><span class="data-val" id="record-fsmax">??? gw</span></div>
+                <div class="data-row"><span>動摩擦力:</span><span class="data-val" id="record-fk">??? gw</span></div>
+            </div>
+        </div>
+
+        <div class="visuals">
+            <canvas id="simCanvas" width="850" height="250"></canvas>
+            <canvas id="chartCanvas" width="850" height="260"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const simCanvas = document.getElementById('simCanvas');
+        const ctxSim = simCanvas.getContext('2d');
+        const chartCanvas = document.getElementById('chartCanvas');
+        const ctxChart = chartCanvas.getContext('2d');
+
+        const pObject = document.getElementById('param-object');
+        const pArea = document.getElementById('param-area');
+        const pSurface = document.getElementById('param-surface');
+        const pForce = document.getElementById('param-force');
+        const btnReset = document.getElementById('btn-reset');
+
+        const vForce = document.getElementById('val-force');
+        const dWeight = document.getElementById('data-weight');
+        const dSpringRead = document.getElementById('data-spring-read');
+        const dState = document.getElementById('data-state');
+        const rFsmax = document.getElementById('record-fsmax');
+        const rFk = document.getElementById('record-fk');
+        const lSurfaceName = document.getElementById('lbl-surface-name');
+
+        let blockX = 130;
+        let blockV = 0;
+        let history = []; 
+        
+        let capturedFsmax = null;
+        let capturedFk = null;
+        let wasMovingLastFrame = false;
+
+        function resetExperiment() {
+            history = [];
+            blockX = 130;
+            blockV = 0;
+            pForce.value = 0;
+            capturedFsmax = null;
+            capturedFk = null;
+            rFsmax.innerText = "??? gw";
+            rFsmax.classList.remove('unlocked');
+            rFk.innerText = "??? gw";
+            rFk.classList.remove('unlocked');
+            wasMovingLastFrame = false;
+
+            // 動態更換拉力上限防呆 (上限為最大靜摩擦力的1.8倍)
+            const weight = parseFloat(pObject.value);
+            const surfOpt = pSurface.options[pSurface.selectedIndex];
+            const mu_s = parseFloat(surfOpt.getAttribute('data-mus'));
+            let realFsmax = weight * mu_s;
+            pForce.max = Math.ceil((realFsmax * 1.8) / 100) * 100;
+            if(pForce.max < 400) pForce.max = 400;
+        }
+
+        pObject.addEventListener('change', resetExperiment);
+        pSurface.addEventListener('change', resetExperiment);
+        pArea.addEventListener('change', () => { history = []; blockX = 130; blockV = 0; pForce.value = 0; });
+
+        function loop() {
+            const weight = parseFloat(pObject.value);
+            const areaOpt = pArea.options[pArea.selectedIndex];
+            const blockW = parseFloat(areaOpt.getAttribute('data-w'));
+            const blockH = parseFloat(areaOpt.getAttribute('data-h'));
+
+            const surfOpt = pSurface.options[pSurface.selectedIndex];
+            const mu_s = parseFloat(surfOpt.getAttribute('data-mus'));
+            const mu_k = parseFloat(surfOpt.getAttribute('data-muk'));
+            const surfaceText = surfOpt.text.split(' ')[0];
+
+            let F = parseFloat(pForce.value);
+
+            let realFsmax = weight * mu_s; 
+            let realFk = weight * mu_k;    
+            
+            let f_current = 0;
+            let isMoving = blockV > 0 || F > realFsmax;
+
+            if (!isMoving) {
+                if (F <= realFsmax) {
+                    f_current = F;
+                    blockV = 0;
+                } else {
+                    isMoving = true;
+                }
+            }
+            
+            if (isMoving) {
+                f_current = realFk;
+                let a = (F - realFk) / (weight / 8); 
+                blockV += a * 0.1;
+                if (blockV < 0) blockV = 0;
+                blockX += blockV;
+                
+                if (blockX > simCanvas.width - 350) blockX = 40; 
+            }
+
+            // 動態捕捉數據
+            if (isMoving && !wasMovingLastFrame && capturedFsmax === null) {
+                capturedFsmax = realFsmax;
+                rFsmax.innerText = Math.round(capturedFsmax) + " gw (已觀測)";
+                rFsmax.classList.add('unlocked');
+            }
+            if (isMoving && capturedFk === null && blockV > 0.5) {
+                capturedFk = realFk;
+                rFk.innerText = Math.round(capturedFk) + " gw (已觀測)";
+                rFk.classList.add('unlocked');
+            }
+
+            wasMovingLastFrame = isMoving;
+
+            if(history.length === 0 || history[history.length-1].F !== F || history[history.length-1].f !== f_current) {
+                history.push({F: F, f: f_current});
+                history.sort((a, b) => a.F - b.F);
+            }
+
+            // 更新面板
+            vForce.innerText = F;
+            dWeight.innerText = weight;
+            dSpringRead.innerText = `${F} gw`;
+            lSurfaceName.innerText = surfaceText;
+            dState.innerText = isMoving ? "【啟動滑動】" : "【保持靜止】";
+            dState.style.color = isMoving ? "#2f855a" : "#c05621";
+
+            // 3. 繪製動畫區
+            ctxSim.clearRect(0, 0, simCanvas.width, simCanvas.height);
+            
+            // 地板材質視覺化
+            let surfaceColor = '#edf2f7'; 
+            if(pSurface.value === 'sandpaper') surfaceColor = '#d9b38c'; 
+            if(pSurface.value === 'concrete') surfaceColor = '#a0aec0'; 
+            
+            ctxSim.fillStyle = surfaceColor;
+            ctxSim.fillRect(0, 210, simCanvas.width, 40);
+
+            // 地面接觸線
+            ctxSim.strokeStyle = '#2d3748';
+            ctxSim.lineWidth = 4;
+            ctxSim.beginPath(); ctxSim.moveTo(0, 210); ctxSim.lineTo(simCanvas.width, 210); ctxSim.stroke();
+            
+            if(pSurface.value !== 'desk') {
+                ctxSim.fillStyle = 'rgba(0,0,0,0.15)';
+                for(let i = 10; i < simCanvas.width; i+=25) {
+                    ctxSim.fillRect(i, 215, 3, 3);
+                    ctxSim.fillRect(i + 10, 225, 2, 2);
+                }
+            }
+
+            // 繪製本體木塊
+            ctxSim.fillStyle = '#cc7a29'; 
+            ctxSim.fillRect(blockX, 210 - blockH, blockW, blockH);
+            ctxSim.strokeStyle = '#59330e';
+            ctxSim.lineWidth = 2;
+            ctxSim.strokeRect(blockX, 210 - blockH, blockW, blockH);
+            
+            ctxSim.fillStyle = '#fff';
+            ctxSim.font = 'bold 11px Arial';
+            ctxSim.fillText(`木塊 500gw`, blockX + blockW/2 - 30, 210 - 15);
+
+            // 繪製累加的 500gw 砝碼 (重疊在木塊上方)
+            let extraWeightCount = (weight - 500) / 500;
+            for(let i = 0; i < extraWeightCount; i++) {
+                let weightY = 210 - blockH - 18 - (i * 16);
+                let weightW = blockW * 0.7;
+                let weightX = blockX + (blockW - weightW)/2;
+                
+                // 畫金屬色砝碼
+                ctxSim.fillStyle = '#718096';
+                ctxSim.fillRect(weightX, weightY, weightW, 14);
+                ctxSim.strokeStyle = '#2d3748';
+                ctxSim.strokeRect(weightX, weightY, weightW, 14);
+                
+                // 砝碼文字
+                ctxSim.fillStyle = '#fff';
+                ctxSim.font = 'bold 9px Arial';
+                ctxSim.fillText(`+500gw砝碼`, weightX + weightW/2 - 26, weightY + 11);
+            }
+
+            // 彈簧秤繪製
+            let springStartX = blockX + blockW;
+            let springStartY = 210 - blockH/2;
+            let springLength = 80 + F * 0.08; 
+
+            ctxSim.strokeStyle = '#718096';
+            ctxSim.lineWidth = 2;
+            ctxSim.beginPath(); ctxSim.moveTo(springStartX, springStartY); ctxSim.lineTo(springStartX + 15, springStartY);
+            
+            let currentX = springStartX + 15;
+            ctxSim.beginPath(); ctxSim.moveTo(currentX, springStartY);
+            let turns = 10;
+            let springWireLength = springLength - 30;
+            let step = springWireLength / turns;
+            for(let i=0; i<turns; i++) {
+                currentX += step;
+                let yOffset = (i % 2 === 0) ? -10 : 10;
+                ctxSim.lineTo(currentX, springStartY + yOffset);
+            }
+            ctxSim.lineTo(springStartX + springLength - 15, springStartY); ctxSim.stroke();
+
+            let scaleEndX = springStartX + springLength;
+            ctxSim.fillStyle = '#fffdf5';
+            ctxSim.fillRect(scaleEndX - 15, springStartY - 12, 65, 24);
+            ctxSim.strokeStyle = '#4a5568';
+            ctxSim.strokeRect(scaleEndX - 15, springStartY - 12, 65, 24);
+            
+            // 紅色指針
+            ctxSim.strokeStyle = '#e53e3e';
+            ctxSim.lineWidth = 3;
+            ctxSim.beginPath(); ctxSim.moveTo(scaleEndX + 15, springStartY - 12); ctxSim.lineTo(scaleEndX + 15, springStartY + 12); ctxSim.stroke();
+
+            // 手把
+            ctxSim.strokeStyle = '#2b6cb0';
+            ctxSim.lineWidth = 3;
+            ctxSim.beginPath(); ctxSim.moveTo(scaleEndX + 50, springStartY); ctxSim.lineTo(scaleEndX + 80, springStartY);
+            ctxSim.arc(scaleEndX + 85, springStartY, 5, 0, Math.PI*2); ctxSim.stroke();
+            
+            ctxSim.fillStyle = '#2b6cb0';
+            ctxSim.font = 'bold 11px Arial';
+            ctxSim.fillText(`拉力: ${F} gw`, scaleEndX - 10, springStartY - 18);
+
+            // 摩擦力紅箭頭
+            if (f_current > 0) {
+                ctxSim.strokeStyle = '#e53e3e';
+                ctxSim.lineWidth = 3;
+                ctxSim.beginPath(); ctxSim.moveTo(blockX, 210); ctxSim.lineTo(blockX - f_current * 0.15, 210); ctxSim.stroke();
+            }
+
+            // 4. 圖表區繪製
+            ctxChart.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+            ctxChart.strokeStyle = '#718096';
+            ctxChart.lineWidth = 2;
+            ctxChart.beginPath(); ctxChart.moveTo(65, 20); ctxChart.lineTo(65, 220); ctxChart.lineTo(820, 220); ctxChart.stroke();
+            
+            ctxChart.fillStyle = '#2d3748';
+            ctxChart.font = '12px Arial';
+            ctxChart.fillText('摩擦力 f (gw)', 55, 14);
+            ctxChart.fillText('彈簧秤拉力 F (gw)', 720, 240);
+
+            let maxRange = parseFloat(pForce.max);
+
+            if(history.length > 0) {
+                ctxChart.strokeStyle = '#805ad5';
+                ctxChart.lineWidth = 3;
+                ctxChart.beginPath();
+                history.forEach((pt, idx) => {
+                    let cx = 65 + (pt.F / maxRange) * 720; 
+                    let cy = 220 - (pt.f / maxRange) * 180;
+                    if(idx === 0) ctxChart.moveTo(cx, cy);
+                    else ctxChart.lineTo(cx, cy);
+                });
+                ctxChart.stroke();
+            }
+
+            let curCx = 65 + (F / maxRange) * 720;
+            let curCy = 220 - (f_current / maxRange) * 180;
+            ctxChart.fillStyle = '#e53e3e';
+            ctxChart.beginPath(); ctxChart.arc(curCx, curCy, 6, 0, Math.PI * 2); ctxChart.fill();
+
+            requestAnimationFrame(loop);
+        }
+
+        btnReset.addEventListener('click', resetExperiment);
+
+        resetExperiment();
+        loop();
+    </script>
+</body>
+</html>
